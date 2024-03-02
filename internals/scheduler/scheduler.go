@@ -84,7 +84,7 @@ func (s *SchedulerServer) Start() error {
 // handleScheduleTask handles POST requests to add new tasks.
 func (s *SchedulerServer) handleScheduleTask(w http.ResponseWriter, r *http.Request) {
 
-	if r.Method != "POST" {
+	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -138,7 +138,7 @@ func (s *SchedulerServer) handleScheduleTask(w http.ResponseWriter, r *http.Requ
 }
 
 func (s *SchedulerServer) handleGetTaskStatus(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -180,27 +180,27 @@ func (s *SchedulerServer) handleGetTaskStatus(w http.ResponseWriter, r *http.Req
 	}
 
 	// Set the scheduled_at time if non-null.
-	if task.ScheduledAt.Status == 2 {
+	if task.ScheduledAt.Status == pgtype.Present {
 		response.ScheduledAt = task.ScheduledAt.Time.String()
 	}
 
 	// Set the picked_at time if non-null.
-	if task.PickedAt.Status == 2 {
+	if task.PickedAt.Status == pgtype.Present {
 		response.PickedAt = task.PickedAt.Time.String()
 	}
 
 	// Set the started_at time if non-null.
-	if task.StartedAt.Status == 2 {
+	if task.StartedAt.Status == pgtype.Present {
 		response.StartedAt = task.StartedAt.Time.String()
 	}
 
 	// Set the completed_at time if non-null.
-	if task.CompletedAt.Status == 2 {
+	if task.CompletedAt.Status == pgtype.Present {
 		response.CompletedAt = task.CompletedAt.Time.String()
 	}
 
 	// Set the failed_at time if non-null.
-	if task.FailedAt.Status == 2 {
+	if task.FailedAt.Status == pgtype.Present {
 		response.FailedAt = task.FailedAt.Time.String()
 	}
 
@@ -236,6 +236,7 @@ func (s *SchedulerServer) insertTaskIntoDB(ctx context.Context, task Task) (stri
 }
 
 func (s *SchedulerServer) awaitShutdown() error {
+	// Create a channel to listen for OS signals
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
@@ -245,12 +246,18 @@ func (s *SchedulerServer) awaitShutdown() error {
 
 // Stop gracefully shuts down the SchedulerServer and the database connection pool.
 func (s *SchedulerServer) Stop() error {
-	s.dbPool.Close()
 	if s.httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		return s.httpServer.Shutdown(ctx)
+		if err := s.httpServer.Shutdown(ctx); err != nil {
+			return fmt.Errorf("failed to shut down HTTP server: %v", err)
+		}
 	}
-	log.Println("Scheduler server and database pool stopped")
+
+	if s.dbPool != nil {
+		s.dbPool.Close()
+	}
+
+	log.Println("Scheduler server stopped")
 	return nil
 }
