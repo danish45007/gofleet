@@ -9,12 +9,12 @@ import (
 )
 
 var (
-	schudulerPort = flag.String("schuduler_port", "8081", "Port for the schuduler to listen on")
+	schedulerPort = flag.String("scheduler_port", "8081", "Port for the scheduler to listen on")
 )
 
 func main() {
 	dbConnection := common.GetDBConnectionString()
-	schedulerServer := scheduler.NewServer(*schudulerPort, dbConnection)
+	schedulerServer := scheduler.NewServer(*schedulerPort, dbConnection)
 	err := schedulerServer.Start()
 	if err != nil {
 		log.Fatalf("Error starting the scheduler server: %v", err)
