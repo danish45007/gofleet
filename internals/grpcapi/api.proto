@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package grpcapi;
+option go_package = "github.com/danish45007/gofleet/internals/grpcapi";
+
+enum TaskStatus {
+    UNKONWN = 0;
+    QUEUED = 1;
+    STARTED = 2;
+    COMPLETED = 3;
+    FAILED = 4;
+}
+
+// the task request contains the task id and the data
+message TaskRequest {
+    string task_id = 1;
+    string data = 2;
+}
+
+// the task response contains the task id, the message and the success status
+message TaskResponse {
+    string task_id = 1;
+    string message = 2;
+    bool success = 3;
+}
+
+// worker service definition
+// coordinator service uses this contract to send tasks to the workers
+service workerService {
+    // Sends a task to the worker
+
+    // Returns the status of the task
+    rpc SubmitTask(TaskRequest) returns (TaskResponse) {}
+}
+
+// ClientTaskRequest contains the data to be processed
+message ClientTaskRequest {
+    string data = 1;
+}
+
+// ClientTaskResponse contains the message and the task id post processing
+message ClientTaskResponse {
+    string message = 2;
+    string task_id = 3;
+}
+
+// HeartbeatRequest contains the worker id and the address
+// Coordinator uses this to keep track of the workers
+message HeartbeatRequest {
+    uint32 workerId = 1;
+    string address = 2;
+}
+
+// HeartbeatResponse contains the acknowledgment message
+message HeartbeatResponse {
+    bool acknowledged = 1;
+}
+
+// UpdateTaskStatusRequest contains the task id and the status for task lifecycle management
+message UpdateTaskStatusRequest {
+  string task_id = 1;
+  TaskStatus status = 2;
+  int64 started_at = 3;
+  int64 completed_at = 4;
+  int64 failed_at = 5;
+}
+
+// UpdateTaskStatusResponse contains the success status of the update
+message UpdateTaskStatusResponse {
+  bool success = 1;
+}
+
+// coordinator service definition
+service CoordinatorService {
+  // Sends a task request to the coordinator.
+  rpc SubmitTask (ClientTaskRequest) returns (ClientTaskResponse) {}
+  // Sends a heartbeat to the server
+  rpc SendHeartbeat (HeartbeatRequest) returns (HeartbeatResponse) {}
+  // Updates a Task Status
+  rpc UpdateTaskStatus (UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse){}
+}

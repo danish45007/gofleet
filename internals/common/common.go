@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	defaultHeartbeatInterval = 5 * time.Second
-	maxRetries               = 5
+	DefaultHeartbeatInterval = 5 * time.Second
+	MaxRetries               = 5
 )
 
 func init() {
@@ -61,7 +61,7 @@ func ConnectToDB(ctx context.Context, dbConnectionString string) (*pgxpool.Pool,
 	var dbPool *pgxpool.Pool
 	var err error
 
-	for retry := 0; retry < maxRetries; retry++ {
+	for retry := 0; retry < MaxRetries; retry++ {
 		if dbPool, err = pgxpool.Connect(ctx, dbConnectionString); err == nil {
 			log.Printf("Connected to the database")
 			return dbPool, nil
@@ -74,12 +74,12 @@ func ConnectToDB(ctx context.Context, dbConnectionString string) (*pgxpool.Pool,
 			return nil, ctx.Err()
 		default:
 			// Continue with exponential backoff
-			waitTime := time.Duration(1<<retry) * defaultHeartbeatInterval
+			waitTime := time.Duration(1<<retry) * DefaultHeartbeatInterval
 			log.Printf("Retrying in %s seconds...", waitTime)
 			time.Sleep(waitTime)
 		}
 	}
 
-	log.Printf("Ran out of retries to connect to database after %s", maxRetries*defaultHeartbeatInterval)
+	log.Printf("Ran out of retries to connect to database after %s", MaxRetries*DefaultHeartbeatInterval)
 	return nil, err
 }
