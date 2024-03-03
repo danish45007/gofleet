@@ -1,0 +1,29 @@
+name: Test Coverage
+
+on:
+  pull_request:
+    types: [ labeled, opened, reopened, synchronize ]
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.repository }}::${{ github.workflow }}::${{ github.ref }}
+  cancel-in-progress: true # cancel previous test workflows
+
+jobs:
+  coverage:
+    runs-on: [ self-hosted, small, dev1 ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: docker compose run --build test
+
+      - name: Upload coverage reports to codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: .coverage/coverage.out
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: danish45007/gofleet
