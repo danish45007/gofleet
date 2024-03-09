@@ -41,8 +41,8 @@ type WorkerServer struct {
 
 	// tasks
 	taskQueue         chan *pb.TaskRequest       // channel to receive tasks from the coordinator
-	receivedTasksLock sync.Mutex                 // lock to protect the receivedTasks map
-	receivedTasks     map[string]*pb.TaskRequest // map to keep track of received tasks
+	ReceivedTasksLock sync.Mutex                 // lock to protect the ReceivedTasks map
+	ReceivedTasks     map[string]*pb.TaskRequest // map to keep track of received tasks
 
 	ctx    context.Context    // the root context for all goroutines
 	cancel context.CancelFunc // function to cancel the context
@@ -58,7 +58,7 @@ func NewServer(port string, coordinatorServiceAddress string) *WorkerServer {
 		coordinatorServiceAddress: coordinatorServiceAddress,
 		heartbeatInterval:         common.DefaultHeartbeatInterval * time.Second,
 		taskQueue:                 make(chan *pb.TaskRequest, taskQueueSize), // buffer channel of size taskQueueSize
-		receivedTasks:             make(map[string]*pb.TaskRequest),
+		ReceivedTasks:             make(map[string]*pb.TaskRequest),
 		ctx:                       ctx,
 		cancel:                    cancel,
 	}
@@ -209,10 +209,10 @@ func (w *WorkerServer) closeGRPConnection() {
 // SubmitTask implements the WorkerServiceServer interface
 func (w *WorkerServer) SubmitTask(ctx context.Context, request *pb.TaskRequest) (*pb.TaskResponse, error) {
 	log.Printf("Received task: %s\n", request)
-	w.receivedTasksLock.Lock()
-	// add the received task to the receivedTasks map
-	w.receivedTasks[request.GetTaskId()] = request
-	w.receivedTasksLock.Unlock()
+	w.ReceivedTasksLock.Lock()
+	// add the received task to the ReceivedTasks map
+	w.ReceivedTasks[request.GetTaskId()] = request
+	w.ReceivedTasksLock.Unlock()
 	// add the task to the taskQueue to be processed by the worker pool
 	w.taskQueue <- request
 	return &pb.TaskResponse{
